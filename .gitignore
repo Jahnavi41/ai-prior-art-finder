@@ -225,3 +225,4 @@ train_mini.csv
 # Sample output folders (optional)
 outputs/
 results/
+venv/
