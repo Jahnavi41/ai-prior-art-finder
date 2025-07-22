@@ -1,21 +1,26 @@
 import numpy as np
 import pandas as pd
+import torch
 from sentence_transformers import SentenceTransformer, util
 
+# Constants
 CSV_PATH = "../data/patents_sample.csv"
-EMBEDDINGS_PATH = "../embeddings/abstract_embeddings.npy"
+EMBEDDINGS_PATH = "../embeddings/minilm_embeddings.npy"
 TOP_K = 5
 
+# Load dataset and precomputed embeddings
 def load_data():
     print("📥 Loading dataset and embeddings...")
     df = pd.read_csv(CSV_PATH)
     embeddings = np.load(EMBEDDINGS_PATH)
-    return df, embeddings
+    return df, torch.tensor(embeddings)  # Convert to tensor for cos_sim
 
+# Generate embedding for input text
 def embed_input(text, model):
     print("🧠 Embedding input abstract...")
     return model.encode(text, convert_to_tensor=True)
 
+# Perform similarity search
 def find_similar_abstracts(input_text, df, embeddings, model, top_k=TOP_K):
     input_embedding = embed_input(input_text, model)
 
@@ -26,7 +31,7 @@ def find_similar_abstracts(input_text, df, embeddings, model, top_k=TOP_K):
     top_results = torch.topk(cosine_scores, k=top_k)
 
     results = []
-    for score, idx in zip(top_results[0], top_results[1]):
+    for score, idx in zip(top_results.values, top_results.indices):
         idx = int(idx)
         results.append({
             "publication_number": df.iloc[idx]["publication_number"],
@@ -35,13 +40,12 @@ def find_similar_abstracts(input_text, df, embeddings, model, top_k=TOP_K):
         })
     return results
 
+# Example usage
 if __name__ == "__main__":
-    import torch
-
     input_abstract = """A device for closing skin wounds using biodegradable clips with adjustable tension,
     designed to minimize scarring and infection."""
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     df, embeddings = load_data()
     results = find_similar_abstracts(input_abstract, df, embeddings, model)
